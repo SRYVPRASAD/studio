@@ -14,14 +14,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import type { Metadata } from 'next';
 
 
-export const metadata: Metadata = {
-  title: 'API Geo Inspector Tool | Test Geolocation & Latency',
-  description: 'Use the Geo Inspector tool to test API responses and measure latency from multiple global geolocations. Analyze geo-clues and verify geo-targeting strategies.',
-};
-
+// Removed metadata export as this is a Client Component
 
 export default function InspectorPage() {
   const [isLoading, setIsLoading] = useState(false);
