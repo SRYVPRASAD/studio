@@ -9,14 +9,20 @@ import ResponseDisplay from '@/components/response-display';
 import AnalysisDisplay from '@/components/analysis-display';
 import { inspectEndpointAction, type SingleLocationInspectionResult } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Clock, MapPinned, CheckCircle, AlertTriangle, ServerCrash, Share2, Download } from 'lucide-react';
+import { AlertCircle, Clock, MapPinned, CheckCircle, AlertTriangle, ServerCrash, Share2, Download, FileText } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 
-// Removed metadata export as this is a Client Component
+// TODO: Replace with your actual base64 encoded logo (e.g., a 100x30px transparent PNG)
+// You can use an online converter to get the base64 string of your image.
+// Example placeholder (a small transparent png):
+const appLogoBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAeCAYAAADvLsomAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAUSURBVHja7cExAQAAAMKg9U9tCU+gAAAAAAAAAADAZgN9AAGfG2xCAAAAAElFTkSuQmCC';
+
 
 export default function InspectorPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -87,7 +93,7 @@ export default function InspectorPage() {
     const status = result.apiResponse.status;
     if (status >= 200 && status < 300) return <Badge className="bg-green-500/20 border-green-500 text-green-300"><CheckCircle className="h-4 w-4 mr-1"/>{status}</Badge>;
     if (status >= 400) return <Badge variant="destructive" className="bg-red-500/20 border-red-500 text-red-300"><AlertTriangle className="h-4 w-4 mr-1"/>{status}</Badge>;
-    if (status >= 300 && status < 400) return <Badge variant="secondary" className="bg-blue-500/20 border-blue-500 text-blue-300">{status}</Badge>; // For redirects
+    if (status >= 300 && status < 400) return <Badge variant="secondary" className="bg-blue-500/20 border-blue-500 text-blue-300">{status}</Badge>; 
     return <Badge variant="secondary" className="bg-yellow-500/20 border-yellow-500 text-yellow-300">{status}</Badge>;
   };
 
@@ -102,19 +108,57 @@ export default function InspectorPage() {
       });
   };
 
-  const handleDownloadResults = () => {
-    if (!inspectionResults || inspectionResults.length === 0) return;
-    const resultsJson = JSON.stringify(inspectionResults, null, 2);
-    const blob = new Blob([resultsJson], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `geo-inspector-results-${new Date().toISOString().slice(0,10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast({ title: "Success", description: "Results download started (JSON)!" });
+  const handleDownloadPdfResults = () => {
+    if (!inspectionResults || inspectionResults.length === 0) {
+      toast({ variant: "destructive", title: "Error", description: "No results to download." });
+      return;
+    }
+
+    const doc = new jsPDF();
+    
+    // Add logo - Adjust x, y, width, height as needed
+    try {
+      const logoWidth = 30; // Adjust as needed
+      const logoHeight = 10; // Adjust as needed
+      doc.addImage(appLogoBase64, 'PNG', 15, 10, logoWidth, logoHeight);
+    } catch (error) {
+      console.error("Error adding logo to PDF:", error);
+      // Continue without logo if it fails
+    }
+
+    doc.setFontSize(18);
+    doc.text("Geo Inspector API Results", 15, 28); // Positioned below logo
+    doc.setFontSize(10);
+    doc.text(`Report generated on: ${new Date().toLocaleString()}`, 15, 33);
+
+    const tableColumn = ["Location", "Status", "Time (ms)", "Content-Type", "Server", "AI Analysis Snippet"];
+    const tableRows = [];
+
+    inspectionResults.forEach(result => {
+      const analysisSnippet = result.analysis ? result.analysis.substring(0, 70) + (result.analysis.length > 70 ? "..." : "") : "N/A";
+      const rowData = [
+        result.location.countryName || "Unknown",
+        result.apiResponse ? result.apiResponse.status.toString() : "Error",
+        result.responseTimeMs !== undefined ? result.responseTimeMs.toString() : "N/A",
+        result.apiResponse?.headers['content-type'] || result.apiResponse?.headers['Content-Type'] || "N/A",
+        result.apiResponse?.headers['server'] || result.apiResponse?.headers['Server'] || "N/A",
+        analysisSnippet
+      ];
+      tableRows.push(rowData);
+    });
+
+    // Need to tell TypeScript that autoTable exists on jsPDF instance
+    (doc as any).autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 40, // Start table below the title and logo
+      theme: 'striped',
+      headStyles: { fillColor: [22, 160, 133] }, // Example: Teal header
+      margin: { top: 30 },
+    });
+    
+    doc.save(`geo-inspector-results-${new Date().toISOString().slice(0,10)}.pdf`);
+    toast({ title: "Success", description: "Results download started (PDF)!" });
   };
 
 
@@ -172,8 +216,8 @@ export default function InspectorPage() {
                 <Button variant="outline" size="icon" onClick={handleCopyResults} title="Copy Results as JSON">
                   <Share2 className="h-5 w-5" />
                 </Button>
-                <Button variant="outline" size="icon" onClick={handleDownloadResults} title="Download Results as JSON">
-                  <Download className="h-5 w-5" />
+                <Button variant="outline" size="icon" onClick={handleDownloadPdfResults} title="Download Results as PDF">
+                  <FileText className="h-5 w-5" /> {/* Changed icon to FileText for PDF */}
                 </Button>
               </div>
             </div>
