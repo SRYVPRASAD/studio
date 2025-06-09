@@ -1,258 +1,142 @@
 
-// src/app/page.tsx
-'use client';
-
-import { useState, useEffect } from 'react';
+// src/app/page.tsx (New Landing Page)
 import Image from 'next/image';
-import GeoInspectorForm from '@/components/geo-inspector-form';
-import ResponseDisplay from '@/components/response-display';
-import AnalysisDisplay from '@/components/analysis-display';
-import { inspectEndpointAction, type SingleLocationInspectionResult } from '@/app/actions';
-import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Info, Clock, MapPinned, CheckCircle, AlertTriangle, ServerCrash, HelpCircle, Route, BarChart3, ServerCog } from 'lucide-react';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { ArrowRight, HelpCircle, Route, BarChart3, ServerCog, Telescope } from 'lucide-react';
+import type { Metadata } from 'next';
 
+export const metadata: Metadata = {
+  title: 'Geo Inspector: Global API Performance & Geolocation Insights',
+  description: 'Discover how your API performs across the globe. Test latency, verify geo-targeting, and uncover hidden behaviors with Geo Inspector. Start analyzing your API from multiple geolocations today.',
+};
 
-export default function Home() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [inspectionResults, setInspectionResults] = useState<SingleLocationInspectionResult[] | null>(null);
-  const [globalError, setGlobalError] = useState<string | null>(null);
-  const { toast } = useToast();
-  const [clientInitialized, setClientInitialized] = useState(false);
-
-  useEffect(() => {
-    setClientInitialized(true);
-  }, []);
-
-  const handleSubmit = async (formData: FormData) => {
-    setIsLoading(true);
-    setInspectionResults(null);
-    setGlobalError(null);
-
-    try {
-      const response = await inspectEndpointAction(formData);
-      
-      if (response.error) {
-        setGlobalError(response.error);
-        toast({
-          variant: "destructive",
-          title: "Validation Error",
-          description: response.error,
-          duration: 7000,
-        });
-      } else if (response.results) {
-        setInspectionResults(response.results);
-        const successfulInspections = response.results.filter(r => !r.error && r.apiResponse).length;
-        const erroredInspections = response.results.filter(r => r.error).length;
-        const totalInspections = response.results.length;
-        
-        let toastTitle = "Inspection Complete";
-        let toastDescription = `${successfulInspections}/${totalInspections} locations inspected successfully.`;
-        if (erroredInspections > 0) {
-            toastTitle = "Inspection Partially Complete";
-            toastDescription = `${successfulInspections}/${totalInspections} locations succeeded, ${erroredInspections} failed.`;
-        }
-
-        toast({
-          title: toastTitle,
-          description: toastDescription,
-          className: erroredInspections > 0 && successfulInspections > 0 ? "bg-yellow-500/20 border-yellow-500 text-yellow-300" : "bg-primary text-primary-foreground border-primary/50",
-          duration: 5000,
-        });
-      }
-    } catch (e) {
-      const errorMsg = e instanceof Error ? e.message : 'An unexpected error occurred processing the request.';
-      setGlobalError(errorMsg);
-      toast({
-        variant: "destructive",
-        title: "Client-side Error",
-        description: errorMsg,
-        duration: 5000,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getStatusBadge = (result: SingleLocationInspectionResult) => {
-    if (result.error && !result.apiResponse && result.location.countryName === "Unknown") return <Badge variant="destructive" className="bg-red-700/30 border-red-700 text-red-200"><ServerCrash className="h-4 w-4 mr-1"/>Invalid Location</Badge>;
-    if (result.error && !result.apiResponse) return <Badge variant="destructive" className="bg-red-700/30 border-red-700 text-red-200"><ServerCrash className="h-4 w-4 mr-1"/>Fetch Error</Badge>;
-    if (!result.apiResponse) return <Badge variant="secondary">No Response</Badge>;
-    
-    const status = result.apiResponse.status;
-    if (status >= 200 && status < 300) return <Badge className="bg-green-500/20 border-green-500 text-green-300"><CheckCircle className="h-4 w-4 mr-1"/>{status}</Badge>;
-    if (status >= 400) return <Badge variant="destructive" className="bg-red-500/20 border-red-500 text-red-300"><AlertTriangle className="h-4 w-4 mr-1"/>{status}</Badge>;
-    if (status >= 300 && status < 400) return <Badge variant="secondary" className="bg-blue-500/20 border-blue-500 text-blue-300">{status}</Badge>; // For redirects
-    return <Badge variant="secondary" className="bg-yellow-500/20 border-yellow-500 text-yellow-300">{status}</Badge>;
-  };
-
-
+export default function LandingPage() {
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen p-4 md:p-8 space-y-8">
-      <header className="text-center space-y-2 mt-4 mb-4">
-        <h1 className="text-5xl md:text-6xl font-bold font-headline text-primary tracking-tight">
-          Geo Inspector
-        </h1>
-        <p className="text-lg md:text-xl text-muted-foreground">
-          Test your API responses from multiple geolocations and analyze for clues.
-        </p>
-      </header>
-
-      <GeoInspectorForm onSubmit={handleSubmit} isLoading={isLoading} />
-
-      {isLoading && (
-        <div className="flex flex-col items-center justify-center space-y-4 p-8 rounded-lg bg-card w-full max-w-lg shadow-xl">
-            <svg className="animate-spin h-12 w-12 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <p className="text-xl text-primary/90">Inspecting endpoints... Please wait.</p>
-             {clientInitialized && <Image 
-                src="https://placehold.co/400x200.png" 
-                alt="Loading illustration of network activity"
-                width={400}
-                height={200}
-                className="rounded-md opacity-50 shadow-md"
-                data-ai-hint="network data"
-                key={`loading-${clientInitialized ? 'client' : 'server'}`}
-            />}
+    <div className="flex flex-col min-h-screen">
+      {/* Hero Section */}
+      <section className="py-16 md:py-24 bg-gradient-to-br from-background to-card/30">
+        <div className="container mx-auto px-4 text-center">
+          <Telescope className="h-20 w-20 text-primary mx-auto mb-6" />
+          <h1 className="text-5xl md:text-7xl font-bold font-headline text-primary tracking-tight mb-6">
+            Geo Inspector
+          </h1>
+          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-10">
+            Pinpoint API performance, measure latency from global regions, and analyze geolocation-specific responses with unparalleled clarity.
+          </p>
+          <Link href="/inspector">
+            <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-3 px-8 h-auto rounded-md shadow-lg transition-transform transform hover:scale-105">
+              Launch Inspector <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
         </div>
-      )}
+      </section>
 
-      {globalError && !isLoading && (
-        <div className="w-full max-w-2xl p-6 bg-destructive/10 border border-destructive text-destructive rounded-lg flex items-start gap-3 shadow-lg">
-          <AlertCircle className="h-6 w-6 shrink-0 mt-1" />
-          <div>
-            <h3 className="font-semibold text-lg">Inspection Problem</h3>
-            <p>{globalError}</p>
+      {/* Features/Info Section */}
+      <section className="py-16 md:py-20">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-8">
+            <InfoCard
+              icon={<Route className="h-8 w-8 text-accent" />}
+              title="How to Use Geo Inspector"
+              description="Navigate the world of API testing with ease."
+            >
+              <ol className="list-decimal list-inside space-y-2 text-foreground/80 mt-3">
+                <li>Go to the <Link href="/inspector" className="text-primary hover:underline">Inspector Tool</Link>.</li>
+                <li><strong>Enter API Endpoint:</strong> Input the full URL of the API you want to test.</li>
+                <li><strong>Select Locations:</strong> Choose one or more countries.</li>
+                <li><strong>Inspect:</strong> Click the "Inspect Endpoints" button.</li>
+                <li><strong>Analyze Results:</strong> Review API response (status, headers, body), latency, and AI-powered geo-clue analysis for each location.</li>
+              </ol>
+            </InfoCard>
+
+            <InfoCard
+              icon={<BarChart3 className="h-8 w-8 text-accent" />}
+              title="Why Geo Inspector is Useful"
+              description="Gain critical insights into your API's global footprint."
+            >
+              <ul className="list-disc list-inside space-y-2 text-foreground/80 mt-3">
+                <li><strong>Measure Latency:</strong> Understand API response times from various global regions.</li>
+                <li><strong>Verify Geo-Targeting:</strong> Confirm region-specific content delivery or restrictions.</li>
+                <li><strong>Optimize CDN Performance:</strong> Check if your CDN effectively routes requests.</li>
+                <li><strong>Enhance Security Analysis:</strong> Uncover unexpected server behaviors or third-party services with geographical implications.</li>
+              </ul>
+            </InfoCard>
+
+            <InfoCard
+              icon={<ServerCog className="h-8 w-8 text-accent" />}
+              title="Achieving Accurate Insights"
+              description="Understand the mechanics behind Geo Inspector."
+            >
+              <p className="text-foreground/80 mt-3">
+                Geo Inspector simulates API requests from diverse geographical locations by (currently) routing them through mock proxy servers representative of the selected countries.
+                It captures the complete HTTP response—status, headers, and body—while measuring round-trip time.
+                An advanced Generative AI model then scrutinizes these responses for subtle patterns and clues indicating server geolocation or geographically-aware behaviors.
+              </p>
+            </InfoCard>
           </div>
         </div>
-      )}
-
-      {inspectionResults && inspectionResults.length > 0 && !isLoading && !globalError && (
-        <Card className="w-full max-w-4xl shadow-xl bg-card">
-          <CardHeader>
-            <CardTitle className="text-2xl font-headline text-primary">Inspection Results</CardTitle>
-            <CardDescription>Click on a location to see detailed response and analysis.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Accordion type="single" collapsible className="w-full">
-              {inspectionResults.map((result, index) => (
-                <AccordionItem value={`item-${index}`} key={`result-${index}-${result.location.countryCode}-${clientInitialized ? 'client' : 'server'}`}>
-                  <AccordionTrigger className="hover:bg-input/30 px-4 rounded-t-md data-[state=open]:bg-input/40 data-[state=open]:rounded-b-none">
-                    <div className="flex flex-col md:flex-row justify-between w-full items-start md:items-center gap-2 md:gap-4 text-left">
-                        <div className="flex items-center gap-2 font-medium text-base text-foreground/90">
-                            <MapPinned className="h-5 w-5 text-primary/80 shrink-0" />
-                            <span>{result.location.countryName || `Location ${index + 1}`} ({result.location.countryCode})</span>
-                        </div>
-                        <div className="flex items-center gap-2 md:gap-3 shrink-0 pl-6 md:pl-0">
-                            {getStatusBadge(result)}
-                            {result.responseTimeMs !== undefined && (
-                                <Badge variant="outline" className="flex items-center gap-1 text-sm border-border/70">
-                                    <Clock className="h-4 w-4" /> {result.responseTimeMs} ms
-                                </Badge>
-                            )}
-                        </div>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="p-4 space-y-6 bg-input/20 rounded-b-md border-x border-b border-border/50">
-                    {result.error && (!result.apiResponse || result.location.countryName === "Unknown") && ( 
-                       <div className="p-4 bg-destructive/10 border border-destructive text-destructive rounded-md">
-                         <p className="font-semibold">Error for this location:</p> 
-                         <p>{result.error}</p>
-                       </div>
-                    )}
-                    {result.apiResponse && (
-                      <>
-                        {result.error && result.location.countryName !== "Unknown" && <p className="text-sm text-yellow-400 px-1 py-2 rounded-md bg-yellow-600/10 border border-yellow-500/30 mb-2"><AlertTriangle className="inline h-4 w-4 mr-1" /> Note: {result.error}</p>}
-                        <ResponseDisplay response={result.apiResponse} />
-                      </>
-                    )}
-                    {result.analysis && (
-                      <AnalysisDisplay analysisText={result.analysis} />
-                    )}
-                    {!result.apiResponse && !result.analysis && !result.error && (
-                        <p className="text-muted-foreground text-center py-4">No data or analysis available for this location.</p>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </CardContent>
-        </Card>
-      )}
+      </section>
       
-      {!inspectionResults && !globalError && !isLoading && (
-         <Card className="w-full max-w-3xl shadow-xl bg-card">
-            <CardHeader>
-                <CardTitle className="text-3xl font-headline text-primary flex items-center">
-                    <HelpCircle className="h-8 w-8 mr-3"/>
-                    Understanding Geo Inspector
-                </CardTitle>
-                <CardDescription className="text-base">
-                    Discover how your API performs globally and uncover hidden geo-specific behaviors.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-8 text-base">
-                <section>
-                    <h3 className="text-xl font-semibold mb-3 flex items-center text-primary/90">
-                        <Route className="h-6 w-6 mr-2 text-accent"/>How to Use Geo Inspector
-                    </h3>
-                    <ol className="list-decimal list-inside space-y-2 text-foreground/80 pl-2">
-                        <li><strong>Enter API Endpoint:</strong> Input the full URL of the API you want to test in the form above.</li>
-                        <li><strong>Select Locations:</strong> Choose one or more countries from the dropdown menus. You can add multiple locations to compare results.</li>
-                        <li><strong>Inspect:</strong> Click the "Inspect Endpoints" button.</li>
-                        <li><strong>Analyze Results:</strong> Review the API response (status, headers, body), latency (response time), and AI-powered geo-clue analysis for each selected location in the results section that will appear below.</li>
-                    </ol>
-                </section>
+      <section className="py-12 md:py-16 bg-card/50">
+        <div className="container mx-auto px-4 text-center">
+            <h2 className="text-3xl font-bold font-headline text-primary mb-4">Ready to Explore Your API's Global Reach?</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+                Stop guessing and start knowing. Geo Inspector provides the data you need to optimize, secure, and understand your API from a global perspective.
+            </p>
+            <Link href="/inspector">
+            <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg py-3 px-8 h-auto rounded-md shadow-md transition-transform transform hover:scale-105">
+              Start Inspecting Now <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
+        </div>
+      </section>
 
-                <section>
-                    <h3 className="text-xl font-semibold mb-3 flex items-center text-primary/90">
-                        <BarChart3 className="h-6 w-6 mr-2 text-accent"/>Why Geo Inspector is Useful
-                    </h3>
-                    <p className="text-foreground/80 mb-2">
-                        Geo Inspector helps you:
-                    </p>
-                    <ul className="list-disc list-inside space-y-2 text-foreground/80 pl-2">
-                        <li><strong>Measure Latency:</strong> Understand API response times from various global regions to identify performance bottlenecks for users in specific areas.</li>
-                        <li><strong>Verify Geo-Targeting:</strong> Confirm that your API serves region-specific content or applies geo-restrictions as intended.</li>
-                        <li><strong>Optimize CDN Performance:</strong> Check if your Content Delivery Network is effectively routing requests for users worldwide.</li>
-                        <li><strong>Enhance Security Analysis:</strong> Uncover unexpected server behaviors or third-party services revealed in API responses that might have geographical implications.</li>
-                    </ul>
-                </section>
-                
-                <section>
-                    <h3 className="text-xl font-semibold mb-3 flex items-center text-primary/90">
-                        <ServerCog className="h-6 w-6 mr-2 text-accent"/>How It Achieves Accuracy
-                    </h3>
-                    <p className="text-foreground/80">
-                        Geo Inspector simulates API requests from diverse geographical locations by (currently) routing them through mock proxy servers representative of the selected countries.
-                        For each request, it diligently captures the complete HTTP response—status code, headers, and body—while precisely measuring the round-trip time.
-                        Furthermore, an advanced Generative AI model scrutinizes these responses to detect subtle patterns and clues that might indicate the true geolocation of the responding server or highlight any geographically-aware behaviors.
-                    </p>
-                </section>
-                 {clientInitialized && <div className="flex justify-center mt-6 pt-4 border-t border-border/30">
-                    <Image 
-                        src="https://placehold.co/500x250.png" 
-                        alt="Stylized illustration of global network connections and data analysis"
-                        width={500}
-                        height={250}
-                        className="rounded-lg opacity-70 shadow-lg"
-                        data-ai-hint="global network"
-                        key={`info-placeholder-${clientInitialized ? 'client' : 'server'}`}
-                    />
-                </div>}
-            </CardContent>
-        </Card>
-      )}
-      <footer className="w-full text-center py-8 mt-auto">
+      {/* Placeholder for illustrative image if desired */}
+      <section className="py-10 md:py-12">
+        <div className="container mx-auto px-4 flex justify-center">
+           <Image 
+              src="https://placehold.co/800x400.png" 
+              alt="Abstract representation of global network connections and data analysis"
+              width={800}
+              height={400}
+              className="rounded-lg opacity-70 shadow-xl border border-border"
+              data-ai-hint="global network analytics"
+              priority
+          />
+        </div>
+      </section>
+
+      <footer className="w-full text-center py-8 mt-auto border-t border-border/30">
         <p className="text-sm text-muted-foreground">
-          Geo Inspector &copy; {new Date().getFullYear()}. Powered by Next.js & GenAI.
+          Geo Inspector &copy; {new Date().getFullYear()}. Powered by Next.js, ShadCN UI & GenAI.
         </p>
       </footer>
     </div>
   );
 }
 
+interface InfoCardProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}
+
+function InfoCard({ icon, title, description, children }: InfoCardProps) {
+  return (
+    <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 bg-card flex flex-col">
+      <CardHeader>
+        <div className="flex items-center gap-3 mb-2">
+          {icon}
+          <CardTitle className="text-2xl font-headline text-primary/90">{title}</CardTitle>
+        </div>
+        <CardDescription className="text-base">{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="text-sm flex-grow">
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
