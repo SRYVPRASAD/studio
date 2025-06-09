@@ -9,17 +9,18 @@ import ResponseDisplay from '@/components/response-display';
 import AnalysisDisplay from '@/components/analysis-display';
 import { inspectEndpointAction, type SingleLocationInspectionResult } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Clock, MapPinned, CheckCircle, AlertTriangle, ServerCrash } from 'lucide-react';
+import { AlertCircle, Clock, MapPinned, CheckCircle, AlertTriangle, ServerCrash, Share2, Download } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Metadata } from 'next';
 
-// It's good practice to define metadata for specific pages if needed
-// export const metadata: Metadata = {
-//   title: 'Geo Inspector Tool | API Geolocation & Latency Testing',
-//   description: 'Use the Geo Inspector tool to test API responses and measure latency from multiple global geolocations. Analyze geo-clues and verify geo-targeting.',
-// };
+
+export const metadata: Metadata = {
+  title: 'API Geo Inspector Tool | Test Geolocation & Latency',
+  description: 'Use the Geo Inspector tool to test API responses and measure latency from multiple global geolocations. Analyze geo-clues and verify geo-targeting strategies.',
+};
 
 
 export default function InspectorPage() {
@@ -95,6 +96,32 @@ export default function InspectorPage() {
     return <Badge variant="secondary" className="bg-yellow-500/20 border-yellow-500 text-yellow-300">{status}</Badge>;
   };
 
+  const handleCopyResults = () => {
+    if (!inspectionResults || inspectionResults.length === 0) return;
+    const resultsJson = JSON.stringify(inspectionResults, null, 2);
+    navigator.clipboard.writeText(resultsJson)
+      .then(() => toast({ title: "Success", description: "Results copied to clipboard as JSON!" }))
+      .catch(err => {
+        console.error("Failed to copy: ", err);
+        toast({ variant: "destructive", title: "Error", description: "Failed to copy results to clipboard." })
+      });
+  };
+
+  const handleDownloadResults = () => {
+    if (!inspectionResults || inspectionResults.length === 0) return;
+    const resultsJson = JSON.stringify(inspectionResults, null, 2);
+    const blob = new Blob([resultsJson], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `geo-inspector-results-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: "Success", description: "Results download started (JSON)!" });
+  };
+
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen p-4 md:p-8 space-y-8">
@@ -141,8 +168,20 @@ export default function InspectorPage() {
       {inspectionResults && inspectionResults.length > 0 && !isLoading && !globalError && (
         <Card className="w-full max-w-4xl shadow-xl bg-card">
           <CardHeader>
-            <CardTitle className="text-2xl font-headline text-primary">Inspection Results</CardTitle>
-            <CardDescription>Click on a location to see detailed response and analysis.</CardDescription>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <CardTitle className="text-2xl font-headline text-primary">Inspection Results</CardTitle>
+                <CardDescription>Click on a location to see detailed response and analysis.</CardDescription>
+              </div>
+              <div className="flex gap-2 mt-2 sm:mt-0 self-start sm:self-center">
+                <Button variant="outline" size="icon" onClick={handleCopyResults} title="Copy Results as JSON">
+                  <Share2 className="h-5 w-5" />
+                </Button>
+                <Button variant="outline" size="icon" onClick={handleDownloadResults} title="Download Results as JSON">
+                  <Download className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
@@ -211,3 +250,4 @@ export default function InspectorPage() {
     </div>
   );
 }
+

@@ -4,7 +4,10 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'Geo Inspector - Global API Performance & Geolocation Tool',
+  title: {
+    template: '%s | Geo Inspector',
+    default: 'Geo Inspector - Global API Performance & Geolocation Tool',
+  },
   description: 'Test API responses and latency from multiple global locations. Analyze geo-clues, verify geo-targeting, and optimize CDN performance with Geo Inspector.',
   keywords: ['Geo Inspector', 'API testing', 'geolocation testing', 'latency testing', 'API performance', 'CDN optimization', 'geo-targeting', 'network analysis', 'proxy testing', 'global API check', 'API tool'],
   openGraph: {
@@ -37,9 +40,18 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased min-h-screen flex flex-col bg-background text-foreground">
-        {children}
+        <div className="flex-grow">
+          {children}
+        </div>
+        <footer className="w-full text-center py-6 border-t border-border/30 bg-card/20">
+          <p className="text-sm text-muted-foreground">
+            Geo Inspector &copy; {new Date().getFullYear()}. 
+            For inquiries, contact: <a href="mailto:YOUR_EMAIL_HERE@example.com" className="text-primary hover:underline">YOUR_EMAIL_HERE@example.com</a>.
+          </p>
+        </footer>
         <Toaster />
       </body>
     </html>
   );
 }
+
