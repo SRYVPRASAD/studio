@@ -9,7 +9,7 @@ import ResponseDisplay from '@/components/response-display';
 import AnalysisDisplay from '@/components/analysis-display';
 import { inspectEndpointAction, type SingleLocationInspectionResult } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Info, Clock, MapPinned, CheckCircle, AlertTriangle, ServerCrash } from 'lucide-react';
+import { AlertCircle, Info, Clock, MapPinned, CheckCircle, AlertTriangle, ServerCrash, HelpCircle, Route, BarChart3, ServerCog } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -185,24 +185,67 @@ export default function Home() {
       )}
       
       {!inspectionResults && !globalError && !isLoading && (
-         <div className="w-full max-w-2xl p-8 bg-card border border-border text-foreground rounded-lg flex flex-col items-center gap-6 text-center shadow-xl">
-          <Info className="h-12 w-12 text-primary" />
-          <div>
-            <h3 className="font-semibold text-2xl font-headline text-primary/90">Ready to Inspect</h3>
-            <p className="text-muted-foreground mt-2">
-              Enter an API endpoint, add one or more geolocations by country, then click "Inspect Endpoints" to see the results.
-            </p>
-          </div>
-          {clientInitialized && <Image 
-            src="https://placehold.co/600x300.png" 
-            alt="Placeholder image of a world map with data points"
-            width={600}
-            height={300}
-            className="rounded-md mt-4 opacity-70 shadow-lg"
-            data-ai-hint="world map"
-            key={`initial-${clientInitialized ? 'client' : 'server'}`}
-            />}
-        </div>
+         <Card className="w-full max-w-3xl shadow-xl bg-card">
+            <CardHeader>
+                <CardTitle className="text-3xl font-headline text-primary flex items-center">
+                    <HelpCircle className="h-8 w-8 mr-3"/>
+                    Understanding Geo Inspector
+                </CardTitle>
+                <CardDescription className="text-base">
+                    Discover how your API performs globally and uncover hidden geo-specific behaviors.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-8 text-base">
+                <section>
+                    <h3 className="text-xl font-semibold mb-3 flex items-center text-primary/90">
+                        <Route className="h-6 w-6 mr-2 text-accent"/>How to Use Geo Inspector
+                    </h3>
+                    <ol className="list-decimal list-inside space-y-2 text-foreground/80 pl-2">
+                        <li><strong>Enter API Endpoint:</strong> Input the full URL of the API you want to test in the form above.</li>
+                        <li><strong>Select Locations:</strong> Choose one or more countries from the dropdown menus. You can add multiple locations to compare results.</li>
+                        <li><strong>Inspect:</strong> Click the "Inspect Endpoints" button.</li>
+                        <li><strong>Analyze Results:</strong> Review the API response (status, headers, body), latency (response time), and AI-powered geo-clue analysis for each selected location in the results section that will appear below.</li>
+                    </ol>
+                </section>
+
+                <section>
+                    <h3 className="text-xl font-semibold mb-3 flex items-center text-primary/90">
+                        <BarChart3 className="h-6 w-6 mr-2 text-accent"/>Why Geo Inspector is Useful
+                    </h3>
+                    <p className="text-foreground/80 mb-2">
+                        Geo Inspector helps you:
+                    </p>
+                    <ul className="list-disc list-inside space-y-2 text-foreground/80 pl-2">
+                        <li><strong>Measure Latency:</strong> Understand API response times from various global regions to identify performance bottlenecks for users in specific areas.</li>
+                        <li><strong>Verify Geo-Targeting:</strong> Confirm that your API serves region-specific content or applies geo-restrictions as intended.</li>
+                        <li><strong>Optimize CDN Performance:</strong> Check if your Content Delivery Network is effectively routing requests for users worldwide.</li>
+                        <li><strong>Enhance Security Analysis:</strong> Uncover unexpected server behaviors or third-party services revealed in API responses that might have geographical implications.</li>
+                    </ul>
+                </section>
+                
+                <section>
+                    <h3 className="text-xl font-semibold mb-3 flex items-center text-primary/90">
+                        <ServerCog className="h-6 w-6 mr-2 text-accent"/>How It Achieves Accuracy
+                    </h3>
+                    <p className="text-foreground/80">
+                        Geo Inspector simulates API requests from diverse geographical locations by (currently) routing them through mock proxy servers representative of the selected countries.
+                        For each request, it diligently captures the complete HTTP response—status code, headers, and body—while precisely measuring the round-trip time.
+                        Furthermore, an advanced Generative AI model scrutinizes these responses to detect subtle patterns and clues that might indicate the true geolocation of the responding server or highlight any geographically-aware behaviors.
+                    </p>
+                </section>
+                 {clientInitialized && <div className="flex justify-center mt-6 pt-4 border-t border-border/30">
+                    <Image 
+                        src="https://placehold.co/500x250.png" 
+                        alt="Stylized illustration of global network connections and data analysis"
+                        width={500}
+                        height={250}
+                        className="rounded-lg opacity-70 shadow-lg"
+                        data-ai-hint="global network"
+                        key={`info-placeholder-${clientInitialized ? 'client' : 'server'}`}
+                    />
+                </div>}
+            </CardContent>
+        </Card>
       )}
       <footer className="w-full text-center py-8 mt-auto">
         <p className="text-sm text-muted-foreground">
