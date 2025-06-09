@@ -1,56 +1,91 @@
 // src/app/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import GeoInspectorForm from '@/components/geo-inspector-form';
 import ResponseDisplay from '@/components/response-display';
 import AnalysisDisplay from '@/components/analysis-display';
-import { inspectEndpointAction, type InspectionResult } from '@/app/actions';
+import { inspectEndpointAction, type SingleLocationInspectionResult } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Info } from 'lucide-react';
+import { AlertCircle, Info, Clock, MapPinned, CheckCircle, AlertTriangle, ServerCrash } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
-  const [inspectionResult, setInspectionResult] = useState<InspectionResult | null>(null);
+  const [inspectionResults, setInspectionResults] = useState<SingleLocationInspectionResult[] | null>(null);
+  const [globalError, setGlobalError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [clientInitialized, setClientInitialized] = useState(false);
+
+  useEffect(() => {
+    setClientInitialized(true);
+  }, []);
 
   const handleSubmit = async (formData: FormData) => {
     setIsLoading(true);
-    setInspectionResult(null); 
+    setInspectionResults(null);
+    setGlobalError(null);
 
     try {
-      const result = await inspectEndpointAction(formData);
-      setInspectionResult(result);
-
-      if (result.error) {
+      const response = await inspectEndpointAction(formData);
+      
+      if (response.error) {
+        setGlobalError(response.error);
         toast({
           variant: "destructive",
-          title: "Inspection Error",
-          description: result.error,
-          duration: 5000,
+          title: "Validation Error",
+          description: response.error,
+          duration: 7000,
         });
-      } else if (result.apiResponse) {
-         toast({
-          title: "Inspection Complete",
-          description: "API response fetched and analyzed.",
-          className: "bg-primary text-primary-foreground border-primary/50",
-          duration: 3000,
+      } else if (response.results) {
+        setInspectionResults(response.results);
+        const successfulInspections = response.results.filter(r => !r.error && r.apiResponse).length;
+        const erroredInspections = response.results.filter(r => r.error).length;
+        const totalInspections = response.results.length;
+        
+        let toastTitle = "Inspection Complete";
+        let toastDescription = `${successfulInspections}/${totalInspections} locations inspected successfully.`;
+        if (erroredInspections > 0) {
+            toastTitle = "Inspection Partially Complete";
+            toastDescription = `${successfulInspections}/${totalInspections} locations succeeded, ${erroredInspections} failed.`;
+        }
+
+        toast({
+          title: toastTitle,
+          description: toastDescription,
+          className: erroredInspections > 0 && successfulInspections > 0 ? "bg-yellow-500/20 border-yellow-500 text-yellow-300" : "bg-primary text-primary-foreground border-primary/50",
+          duration: 5000,
         });
       }
     } catch (e) {
-      const error = e instanceof Error ? e.message : 'An unexpected error occurred.';
+      const errorMsg = e instanceof Error ? e.message : 'An unexpected error occurred processing the request.';
+      setGlobalError(errorMsg);
       toast({
         variant: "destructive",
-        title: "Client Error",
-        description: error,
+        title: "Client-side Error",
+        description: errorMsg,
         duration: 5000,
       });
-      setInspectionResult({ error });
     } finally {
       setIsLoading(false);
     }
   };
+
+  const getStatusBadge = (result: SingleLocationInspectionResult) => {
+    if (result.error && !result.apiResponse) return <Badge variant="destructive" className="bg-red-700/30 border-red-700 text-red-200"><ServerCrash className="h-4 w-4 mr-1"/>Fetch Error</Badge>;
+    if (!result.apiResponse) return <Badge variant="secondary">No Response</Badge>;
+    
+    const status = result.apiResponse.status;
+    if (status >= 200 && status < 300) return <Badge className="bg-green-500/20 border-green-500 text-green-300"><CheckCircle className="h-4 w-4 mr-1"/>{status}</Badge>;
+    if (status >= 400) return <Badge variant="destructive" className="bg-red-500/20 border-red-500 text-red-300"><AlertTriangle className="h-4 w-4 mr-1"/>{status}</Badge>;
+    if (status >= 300 && status < 400) return <Badge variant="secondary" className="bg-blue-500/20 border-blue-500 text-blue-300">{status}</Badge>; // For redirects
+    return <Badge variant="secondary" className="bg-yellow-500/20 border-yellow-500 text-yellow-300">{status}</Badge>;
+  };
+
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen p-4 md:p-8 space-y-8">
@@ -59,7 +94,7 @@ export default function Home() {
           Geo Inspector
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground">
-          Test your API responses from different geolocations and analyze for clues.
+          Test your API responses from multiple geolocations and analyze for clues.
         </p>
       </header>
 
@@ -71,54 +106,100 @@ export default function Home() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <p className="text-xl text-primary/90">Inspecting endpoint... Please wait.</p>
-             <Image 
+            <p className="text-xl text-primary/90">Inspecting endpoints... Please wait.</p>
+             {clientInitialized && <Image 
                 src="https://placehold.co/400x200.png" 
                 alt="Loading illustration of network activity"
                 width={400}
                 height={200}
                 className="rounded-md opacity-50 shadow-md"
                 data-ai-hint="network data"
-            />
+                key={`loading-${Math.random()}`}
+            />}
         </div>
       )}
 
-      {inspectionResult?.error && !isLoading && (
+      {globalError && !isLoading && (
         <div className="w-full max-w-2xl p-6 bg-destructive/10 border border-destructive text-destructive rounded-lg flex items-start gap-3 shadow-lg">
           <AlertCircle className="h-6 w-6 shrink-0 mt-1" />
           <div>
-            <h3 className="font-semibold text-lg">Inspection Failed</h3>
-            <p>{inspectionResult.error}</p>
+            <h3 className="font-semibold text-lg">Inspection Problem</h3>
+            <p>{globalError}</p>
           </div>
         </div>
       )}
 
-      {inspectionResult?.apiResponse && !isLoading && (
-        <div className="w-full max-w-4xl space-y-8">
-          <ResponseDisplay response={inspectionResult.apiResponse} />
-          {inspectionResult.analysis && (
-            <AnalysisDisplay analysisText={inspectionResult.analysis} />
-          )}
-        </div>
+      {inspectionResults && inspectionResults.length > 0 && !isLoading && !globalError && (
+        <Card className="w-full max-w-4xl shadow-xl bg-card">
+          <CardHeader>
+            <CardTitle className="text-2xl font-headline text-primary">Inspection Results</CardTitle>
+            <CardDescription>Click on a location to see detailed response and analysis.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Accordion type="single" collapsible className="w-full">
+              {inspectionResults.map((result, index) => (
+                <AccordionItem value={`item-${index}`} key={`result-${index}-${result.location.latitude}-${result.location.longitude}-${clientInitialized ? Math.random() : index }`}>
+                  <AccordionTrigger className="hover:bg-input/30 px-4 rounded-t-md data-[state=open]:bg-input/40 data-[state=open]:rounded-b-none">
+                    <div className="flex flex-col md:flex-row justify-between w-full items-start md:items-center gap-2 md:gap-4 text-left">
+                        <div className="flex items-center gap-2 font-medium text-base text-foreground/90">
+                            <MapPinned className="h-5 w-5 text-primary/80 shrink-0" />
+                            <span>Location {index + 1}: ({result.location.latitude}, {result.location.longitude})</span>
+                        </div>
+                        <div className="flex items-center gap-2 md:gap-3 shrink-0 pl-6 md:pl-0">
+                            {getStatusBadge(result)}
+                            {result.responseTimeMs !== undefined && (
+                                <Badge variant="outline" className="flex items-center gap-1 text-sm border-border/70">
+                                    <Clock className="h-4 w-4" /> {result.responseTimeMs} ms
+                                </Badge>
+                            )}
+                        </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="p-4 space-y-6 bg-input/20 rounded-b-md border-x border-b border-border/50">
+                    {result.error && !result.apiResponse && ( // Only show if it's a fetch error without any response
+                       <div className="p-4 bg-destructive/10 border border-destructive text-destructive rounded-md">
+                         <p className="font-semibold">Error for this location:</p> 
+                         <p>{result.error}</p>
+                       </div>
+                    )}
+                    {result.apiResponse && (
+                      <>
+                        {result.error && <p className="text-sm text-yellow-400 px-1 py-2 rounded-md bg-yellow-600/10 border border-yellow-500/30 mb-2"><AlertTriangle className="inline h-4 w-4 mr-1" /> Note: {result.error}</p>}
+                        <ResponseDisplay response={result.apiResponse} />
+                      </>
+                    )}
+                    {result.analysis && (
+                      <AnalysisDisplay analysisText={result.analysis} />
+                    )}
+                    {!result.apiResponse && !result.analysis && !result.error && (
+                        <p className="text-muted-foreground text-center py-4">No data or analysis available for this location.</p>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </CardContent>
+        </Card>
       )}
-
-      {!inspectionResult && !isLoading && (
+      
+      {!inspectionResults && !globalError && !isLoading && (
          <div className="w-full max-w-2xl p-8 bg-card border border-border text-foreground rounded-lg flex flex-col items-center gap-6 text-center shadow-xl">
           <Info className="h-12 w-12 text-primary" />
           <div>
             <h3 className="font-semibold text-2xl font-headline text-primary/90">Ready to Inspect</h3>
             <p className="text-muted-foreground mt-2">
-              Enter an API endpoint and target geolocation above, then click "Inspect Endpoint" to see the results.
+              Enter an API endpoint, add one or more geolocations, then click "Inspect Endpoints" to see the results.
             </p>
           </div>
-          <Image 
+          {clientInitialized && <Image 
             src="https://placehold.co/600x300.png" 
             alt="Placeholder image of a world map with data points"
             width={600}
             height={300}
             className="rounded-md mt-4 opacity-70 shadow-lg"
             data-ai-hint="world map"
-            />
+            key={`initial-${Math.random()}`}
+            />}
         </div>
       )}
       <footer className="w-full text-center py-8 mt-auto">
