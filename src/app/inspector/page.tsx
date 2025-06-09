@@ -9,7 +9,7 @@ import ResponseDisplay from '@/components/response-display';
 import AnalysisDisplay from '@/components/analysis-display';
 import { inspectEndpointAction, type SingleLocationInspectionResult } from '@/app/actions';
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Clock, MapPinned, CheckCircle, AlertTriangle, ServerCrash, Share2, Download, FileText } from 'lucide-react';
+import { AlertCircle, Clock, MapPinned, CheckCircle, AlertTriangle, ServerCrash, Share2, FileText } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,8 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
 
-// TODO: Replace with your actual base64 encoded logo (e.g., a 100x30px transparent PNG)
-// You can use an online converter to get the base64 string of your image.
-// Example placeholder (a small transparent png):
+// Updated valid placeholder base64 encoded logo (100x30px transparent PNG)
+// Replace this with your actual logo's base64 string.
 const appLogoBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAeCAYAAADvLsomAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAUSURBVHja7cExAQAAAMKg9U9tCU+gAAAAAAAAAADAZgN9AAGfG2xCAAAAAElFTkSuQmCC';
 
 
@@ -116,18 +115,16 @@ export default function InspectorPage() {
 
     const doc = new jsPDF();
     
-    // Add logo - Adjust x, y, width, height as needed
     try {
-      const logoWidth = 30; // Adjust as needed
-      const logoHeight = 10; // Adjust as needed
+      const logoWidth = 30; 
+      const logoHeight = 10; 
       doc.addImage(appLogoBase64, 'PNG', 15, 10, logoWidth, logoHeight);
     } catch (error) {
       console.error("Error adding logo to PDF:", error);
-      // Continue without logo if it fails
     }
 
     doc.setFontSize(18);
-    doc.text("Geo Inspector API Results", 15, 28); // Positioned below logo
+    doc.text("Geo Inspector API Results", 15, 28); 
     doc.setFontSize(10);
     doc.text(`Report generated on: ${new Date().toLocaleString()}`, 15, 33);
 
@@ -147,13 +144,12 @@ export default function InspectorPage() {
       tableRows.push(rowData);
     });
 
-    // Need to tell TypeScript that autoTable exists on jsPDF instance
     (doc as any).autoTable({
       head: [tableColumn],
       body: tableRows,
-      startY: 40, // Start table below the title and logo
+      startY: 40, 
       theme: 'striped',
-      headStyles: { fillColor: [22, 160, 133] }, // Example: Teal header
+      headStyles: { fillColor: [22, 160, 133] }, 
       margin: { top: 30 },
     });
     
@@ -217,7 +213,7 @@ export default function InspectorPage() {
                   <Share2 className="h-5 w-5" />
                 </Button>
                 <Button variant="outline" size="icon" onClick={handleDownloadPdfResults} title="Download Results as PDF">
-                  <FileText className="h-5 w-5" /> {/* Changed icon to FileText for PDF */}
+                  <FileText className="h-5 w-5" />
                 </Button>
               </div>
             </div>
@@ -289,4 +285,3 @@ export default function InspectorPage() {
     </div>
   );
 }
-
