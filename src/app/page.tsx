@@ -1,3 +1,4 @@
+
 // src/app/page.tsx
 'use client';
 
@@ -76,6 +77,7 @@ export default function Home() {
   };
 
   const getStatusBadge = (result: SingleLocationInspectionResult) => {
+    if (result.error && !result.apiResponse && result.location.countryName === "Unknown") return <Badge variant="destructive" className="bg-red-700/30 border-red-700 text-red-200"><ServerCrash className="h-4 w-4 mr-1"/>Invalid Location</Badge>;
     if (result.error && !result.apiResponse) return <Badge variant="destructive" className="bg-red-700/30 border-red-700 text-red-200"><ServerCrash className="h-4 w-4 mr-1"/>Fetch Error</Badge>;
     if (!result.apiResponse) return <Badge variant="secondary">No Response</Badge>;
     
@@ -114,7 +116,7 @@ export default function Home() {
                 height={200}
                 className="rounded-md opacity-50 shadow-md"
                 data-ai-hint="network data"
-                key={`loading-${Math.random()}`}
+                key={`loading-${clientInitialized ? 'client' : 'server'}`}
             />}
         </div>
       )}
@@ -138,12 +140,12 @@ export default function Home() {
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
               {inspectionResults.map((result, index) => (
-                <AccordionItem value={`item-${index}`} key={`result-${index}-${result.location.latitude}-${result.location.longitude}-${clientInitialized ? Math.random() : index }`}>
+                <AccordionItem value={`item-${index}`} key={`result-${index}-${result.location.countryCode}-${clientInitialized ? 'client' : 'server'}`}>
                   <AccordionTrigger className="hover:bg-input/30 px-4 rounded-t-md data-[state=open]:bg-input/40 data-[state=open]:rounded-b-none">
                     <div className="flex flex-col md:flex-row justify-between w-full items-start md:items-center gap-2 md:gap-4 text-left">
                         <div className="flex items-center gap-2 font-medium text-base text-foreground/90">
                             <MapPinned className="h-5 w-5 text-primary/80 shrink-0" />
-                            <span>Location {index + 1}: ({result.location.latitude}, {result.location.longitude})</span>
+                            <span>{result.location.countryName || `Location ${index + 1}`} ({result.location.countryCode})</span>
                         </div>
                         <div className="flex items-center gap-2 md:gap-3 shrink-0 pl-6 md:pl-0">
                             {getStatusBadge(result)}
@@ -156,7 +158,7 @@ export default function Home() {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="p-4 space-y-6 bg-input/20 rounded-b-md border-x border-b border-border/50">
-                    {result.error && !result.apiResponse && ( // Only show if it's a fetch error without any response
+                    {result.error && (!result.apiResponse || result.location.countryName === "Unknown") && ( 
                        <div className="p-4 bg-destructive/10 border border-destructive text-destructive rounded-md">
                          <p className="font-semibold">Error for this location:</p> 
                          <p>{result.error}</p>
@@ -164,7 +166,7 @@ export default function Home() {
                     )}
                     {result.apiResponse && (
                       <>
-                        {result.error && <p className="text-sm text-yellow-400 px-1 py-2 rounded-md bg-yellow-600/10 border border-yellow-500/30 mb-2"><AlertTriangle className="inline h-4 w-4 mr-1" /> Note: {result.error}</p>}
+                        {result.error && result.location.countryName !== "Unknown" && <p className="text-sm text-yellow-400 px-1 py-2 rounded-md bg-yellow-600/10 border border-yellow-500/30 mb-2"><AlertTriangle className="inline h-4 w-4 mr-1" /> Note: {result.error}</p>}
                         <ResponseDisplay response={result.apiResponse} />
                       </>
                     )}
@@ -188,7 +190,7 @@ export default function Home() {
           <div>
             <h3 className="font-semibold text-2xl font-headline text-primary/90">Ready to Inspect</h3>
             <p className="text-muted-foreground mt-2">
-              Enter an API endpoint, add one or more geolocations, then click "Inspect Endpoints" to see the results.
+              Enter an API endpoint, add one or more geolocations by country, then click "Inspect Endpoints" to see the results.
             </p>
           </div>
           {clientInitialized && <Image 
@@ -198,7 +200,7 @@ export default function Home() {
             height={300}
             className="rounded-md mt-4 opacity-70 shadow-lg"
             data-ai-hint="world map"
-            key={`initial-${Math.random()}`}
+            key={`initial-${clientInitialized ? 'client' : 'server'}`}
             />}
         </div>
       )}
@@ -210,3 +212,4 @@ export default function Home() {
     </div>
   );
 }
+

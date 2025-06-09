@@ -1,3 +1,4 @@
+
 // src/components/geo-inspector-form.tsx
 'use client';
 
@@ -6,12 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Globe, MapPin, Send, PlusCircle, XCircle } from 'lucide-react';
+import { countries, type Country } from '@/lib/countries';
 
 interface LocationField {
   id: string; // For unique key in React rendering
-  latitude: string;
-  longitude: string;
+  countryCode: string;
 }
 
 interface GeoInspectorFormProps {
@@ -22,11 +24,11 @@ interface GeoInspectorFormProps {
 export default function GeoInspectorForm({ onSubmit, isLoading }: GeoInspectorFormProps) {
   const [endpoint, setEndpoint] = useState('https://jsonplaceholder.typicode.com/todos/1');
   const [locations, setLocations] = useState<LocationField[]>([
-    { id: `loc-${Date.now()}`, latitude: '34.0522', longitude: '-118.2437' },
+    { id: `loc-${Date.now()}`, countryCode: 'US' }, // Default to US
   ]);
 
   const handleAddLocation = () => {
-    setLocations([...locations, { id: `loc-${Date.now()}`, latitude: '', longitude: '' }]);
+    setLocations([...locations, { id: `loc-${Date.now()}`, countryCode: '' }]);
   };
 
   const handleRemoveLocation = (id: string) => {
@@ -35,8 +37,8 @@ export default function GeoInspectorForm({ onSubmit, isLoading }: GeoInspectorFo
     }
   };
 
-  const handleLocationChange = (id: string, field: 'latitude' | 'longitude', value: string) => {
-    setLocations(locations.map(loc => loc.id === id ? { ...loc, [field]: value } : loc));
+  const handleLocationChange = (id: string, value: string) => { // value is countryCode
+    setLocations(locations.map(loc => loc.id === id ? { ...loc, countryCode: value } : loc));
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -45,8 +47,7 @@ export default function GeoInspectorForm({ onSubmit, isLoading }: GeoInspectorFo
     newFormData.append('endpoint', endpoint);
     newFormData.append('locationCount', locations.length.toString());
     locations.forEach((loc, index) => {
-      newFormData.append(`latitude_${index}`, loc.latitude);
-      newFormData.append(`longitude_${index}`, loc.longitude);
+      newFormData.append(`countryCode_${index}`, loc.countryCode);
     });
     await onSubmit(newFormData);
   };
@@ -97,42 +98,29 @@ export default function GeoInspectorForm({ onSubmit, isLoading }: GeoInspectorFo
                     </Button>
                   )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor={`latitude_${index}`} className="flex items-center gap-1 text-sm text-foreground/90">
-                      <MapPin className="h-4 w-4" /> Latitude
+                <div className="space-y-2">
+                    <Label htmlFor={`countryCode_${index}`} className="flex items-center gap-1 text-sm text-foreground/90">
+                      <MapPin className="h-4 w-4" /> Country
                     </Label>
-                    <Input
-                      id={`latitude_${index}`}
-                      name={`latitude_${index}`}
-                      type="number"
-                      step="any"
-                      placeholder="e.g., 34.0522"
-                      required
-                      disabled={isLoading}
-                      value={loc.latitude}
-                      onChange={(e) => handleLocationChange(loc.id, 'latitude', e.target.value)}
-                      className="text-base bg-input text-foreground placeholder:text-muted-foreground"
-                    />
+                    <Select
+                        name={`countryCode_${index}`}
+                        value={loc.countryCode}
+                        onValueChange={(value) => handleLocationChange(loc.id, value)}
+                        disabled={isLoading}
+                        required
+                    >
+                        <SelectTrigger className="text-base bg-input text-foreground placeholder:text-muted-foreground">
+                            <SelectValue placeholder="Select a country" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover text-popover-foreground">
+                            {countries.map((country) => (
+                                <SelectItem key={country.code} value={country.code}>
+                                    {country.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor={`longitude_${index}`} className="flex items-center gap-1 text-sm text-foreground/90">
-                      <MapPin className="h-4 w-4" /> Longitude
-                    </Label>
-                    <Input
-                      id={`longitude_${index}`}
-                      name={`longitude_${index}`}
-                      type="number"
-                      step="any"
-                      placeholder="e.g., -118.2437"
-                      required
-                      disabled={isLoading}
-                      value={loc.longitude}
-                      onChange={(e) => handleLocationChange(loc.id, 'longitude', e.target.value)}
-                      className="text-base bg-input text-foreground placeholder:text-muted-foreground"
-                    />
-                  </div>
-                </div>
               </div>
             ))}
           </div>

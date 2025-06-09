@@ -1,8 +1,10 @@
+
 // src/app/actions.ts
 'use server';
 
 import { z } from 'zod';
 import { analyzeGeoClues, type AnalyzeGeoCluesInput } from '@/ai/flows/analyze-geo-clues';
+import { getCoordinatesByCountryCode, getCountryByCode, type Country } from '@/lib/countries';
 import type { performance } from 'perf_hooks'; // For Node.js performance
 
 export interface ApiResponse {
@@ -12,13 +14,14 @@ export interface ApiResponse {
 }
 
 export interface LocationInput {
-  latitude: number;
-  longitude: number;
+  countryCode: string;
+  countryName: string;
+  latitude: number; // Derived latitude
+  longitude: number; // Derived longitude
 }
 
 const locationInputSchema = z.object({
-  latitude: z.coerce.number().min(-90, {message: "Latitude must be between -90 and 90."}).max(90, {message: "Latitude must be between -90 and 90."}),
-  longitude: z.coerce.number().min(-180, {message: "Longitude must be between -180 and 180."}).max(180, {message: "Longitude must be between -180 and 180."}),
+  countryCode: z.string().min(2, { message: "Please select a country." }),
 });
 
 const inspectMultiEndpointSchema = z.object({
@@ -81,12 +84,11 @@ async function fetchViaGeoProxy(endpoint: string, latitude: number, longitude: n
 export async function inspectEndpointAction(formData: FormData): Promise<{results?: SingleLocationInspectionResult[], error?: string}> {
   const endpoint = formData.get('endpoint') as string;
   const locationCount = parseInt(formData.get('locationCount') as string || '0', 10);
-  const locationsData: any[] = [];
+  const locationsData: { countryCode: string }[] = [];
 
   for (let i = 0; i < locationCount; i++) {
     locationsData.push({
-      latitude: formData.get(`latitude_${i}`),
-      longitude: formData.get(`longitude_${i}`),
+      countryCode: formData.get(`countryCode_${i}`) as string,
     });
   }
   
@@ -99,17 +101,35 @@ export async function inspectEndpointAction(formData: FormData): Promise<{result
     return { error: validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ') };
   }
 
-  const { endpoint: validatedEndpoint, locations: validatedLocations } = validationResult.data;
+  const { endpoint: validatedEndpoint, locations: validatedLocationInputs } = validationResult.data;
   const results: SingleLocationInspectionResult[] = [];
 
-  // Ensure performance is available (Node.js global or imported)
   const { performance: nodePerformance } = await import('perf_hooks');
 
-  for (const loc of validatedLocations) {
-    let singleResult: SingleLocationInspectionResult = { location: loc };
+  for (const locInput of validatedLocationInputs) {
+    const country = getCountryByCode(locInput.countryCode);
+    if (!country) {
+      results.push({ 
+        location: { countryCode: locInput.countryCode, countryName: "Unknown", latitude: 0, longitude: 0 }, // Provide fallback values
+        error: `Country code ${locInput.countryCode} is not valid or supported.` 
+      });
+      continue;
+    }
+
+    const derivedCoords = { latitude: country.latitude, longitude: country.longitude };
+    
+    const fullLocationInput: LocationInput = {
+        countryCode: country.code,
+        countryName: country.name,
+        latitude: derivedCoords.latitude,
+        longitude: derivedCoords.longitude,
+    };
+
+    let singleResult: SingleLocationInspectionResult = { location: fullLocationInput };
+    
     try {
       const startTime = nodePerformance.now();
-      const apiResponse = await fetchViaGeoProxy(validatedEndpoint, loc.latitude, loc.longitude);
+      const apiResponse = await fetchViaGeoProxy(validatedEndpoint, derivedCoords.latitude, derivedCoords.longitude);
       const endTime = nodePerformance.now();
       singleResult.responseTimeMs = Math.round(endTime - startTime);
       singleResult.apiResponse = apiResponse;
@@ -119,9 +139,9 @@ export async function inspectEndpointAction(formData: FormData): Promise<{result
           httpStatus: apiResponse.status,
           headers: apiResponse.headers,
           body: apiResponse.body,
-          targetGeolocation: {
-            latitude: loc.latitude,
-            longitude: loc.longitude,
+          targetGeolocation: { // AI still gets lat/lon for its context
+            latitude: derivedCoords.latitude,
+            longitude: derivedCoords.longitude,
           },
         };
         const analysisResult = await analyzeGeoClues(analysisInput);
@@ -132,11 +152,12 @@ export async function inspectEndpointAction(formData: FormData): Promise<{result
          singleResult.analysis = "Response body was empty, no content to analyze.";
       }
     } catch (e) {
-      console.error(`Error inspecting endpoint for location ${loc.latitude},${loc.longitude}:`, e);
+      console.error(`Error inspecting endpoint for ${country.name}:`, e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-      singleResult.error = `Failed to inspect for ${loc.latitude},${loc.longitude}: ${errorMessage}`;
+      singleResult.error = `Failed to inspect for ${country.name}: ${errorMessage}`;
     }
     results.push(singleResult);
   }
   return { results };
 }
+
