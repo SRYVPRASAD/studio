@@ -120,6 +120,6 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 ## 📬 Contact
 
-Your Name – SRYVPRASAD@gmail.com
+Email – SRYVPRASAD@gmail.com
 
-Project Link: [https://github.com/SRYVPRASAD/geo-inspector](https://github.com/SRYVPRASAD/geo-inspector)
+Project Link: [Geo Inspector Tool](https://github.com/SRYVPRASAD/studio.git)
