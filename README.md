@@ -120,6 +120,6 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 ## 📬 Contact
 
-Your Name – your.email@example.com
+Your Name – SRYVPRASAD@gmail.com
 
-Project Link: [https://github.com/your-username/geo-inspector](https://github.com/your-username/geo-inspector)
+Project Link: [https://github.com/SRYVPRASAD/geo-inspector](https://github.com/SRYVPRASAD/geo-inspector)
